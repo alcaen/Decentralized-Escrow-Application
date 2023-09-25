@@ -2,6 +2,7 @@ import { ethers } from 'ethers';
 import { useEffect, useState } from 'react';
 import deploy from './deploy';
 import Escrow from './Escrow';
+import { useEscrowStore } from './store/scrow.store';
 
 const provider = new ethers.providers.Web3Provider(window.ethereum);
 
@@ -11,27 +12,27 @@ export async function approve(escrowContract, signer) {
 }
 
 function App() {
-  const [escrows, setEscrows] = useState([]);
+  const addScrow = useEscrowStore((state) => state.addEscrow);
+  const escrows = useEscrowStore((state) => state.escrows);
+  // const [escrows, setEscrows] = useState([]);
   const [account, setAccount] = useState();
   const [signer, setSigner] = useState();
 
   useEffect(() => {
     async function getAccounts() {
       const accounts = await provider.send('eth_requestAccounts', []);
-
       setAccount(accounts[0]);
       setSigner(provider.getSigner());
     }
-
     getAccounts();
   }, [account]);
 
   async function newContract() {
     const beneficiary = document.getElementById('beneficiary').value;
     const arbiter = document.getElementById('arbiter').value;
-    const value = ethers.BigNumber.from(document.getElementById('wei').value);
-    const escrowContract = await deploy(signer, arbiter, beneficiary, value);
-
+    const value = document.getElementById('wei').value;
+    const weiValue = ethers.utils.parseUnits(value, 'ether');
+    const escrowContract = await deploy(signer, arbiter, beneficiary, weiValue);
 
     const escrow = {
       address: escrowContract.address,
@@ -49,32 +50,41 @@ function App() {
         await approve(escrowContract, signer);
       },
     };
-
-    setEscrows([...escrows, escrow]);
+    addScrow(escrow);
+    // setEscrows([...escrows, escrow]);
   }
 
   return (
     <>
-      <div className="contract">
+      <div className='contract'>
         <h1> New Contract </h1>
         <label>
           Arbiter Address
-          <input type="text" id="arbiter" />
+          <input
+            type='text'
+            id='arbiter'
+          />
         </label>
 
         <label>
           Beneficiary Address
-          <input type="text" id="beneficiary" />
+          <input
+            type='text'
+            id='beneficiary'
+          />
         </label>
 
         <label>
-          Deposit Amount (in Wei)
-          <input type="text" id="wei" />
+          Deposit Amount (in ETHER)
+          <input
+            type='text'
+            id='wei'
+          />
         </label>
 
         <div
-          className="button"
-          id="deploy"
+          className='button'
+          id='deploy'
           onClick={(e) => {
             e.preventDefault();
 
@@ -85,12 +95,17 @@ function App() {
         </div>
       </div>
 
-      <div className="existing-contracts">
+      <div className='existing-contracts'>
         <h1> Existing Contracts </h1>
 
-        <div id="container">
+        <div id='container'>
           {escrows.map((escrow) => {
-            return <Escrow key={escrow.address} {...escrow} />;
+            return (
+              <Escrow
+                key={escrow.address}
+                {...escrow}
+              />
+            );
           })}
         </div>
       </div>
